@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Strimmr</title>
+</head>
+<body>
+<h1>Strimmr</h1>
+<script>
+  if (window["WebSocket"]) {
+    var conn = new WebSocket('ws://' + location.host + '/socket');
+    conn.onclose = function(evt) {
+      console.log('Connection closed', evt)
+    }
+    conn.onmessage = function(evt) {
+      console.log('Message recieved', evt)
+    }
+  } else {
+    alert('Your browser doesn\'t support web sockets')
+  }
+</script>
+</body>
+</html>
