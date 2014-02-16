@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -14,20 +12,9 @@ const (
 )
 
 type Conn struct {
-	socket *websocket.Conn
-	output chan []byte
-}
-
-func CreateConn(w http.ResponseWriter, r *http.Request) *Conn {
-	socket, err := websocket.Upgrade(w, r, nil, 1024, 1024)
-	if _, ok := err.(websocket.HandshakeError); ok {
-		http.Error(w, "Not a websocket handshake", 400)
-		return nil
-	} else if err != nil {
-		log.Println(err)
-		return nil
-	}
-	return &Conn{output: make(chan []byte, 256), socket: socket}
+	socket  *websocket.Conn
+	output  chan []byte
+	created time.Time
 }
 
 // write writes a message with the given message type and payload.
@@ -36,7 +23,8 @@ func (c *Conn) write(messageType int, payload []byte) error {
 	return c.socket.WriteMessage(messageType, payload)
 }
 
-// writePump pumps messages from the hub to the websocket connection.
+// writePump pumps messages sent from the hub on the connection's channel to the
+// websocket connection.
 func (c *Conn) WritePump() {
 	ticker := time.NewTicker(PING_PERIOD)
 	defer func() {
@@ -47,16 +35,13 @@ func (c *Conn) WritePump() {
 		select {
 		case message, ok := <-c.output:
 			if !ok {
-				log.Println("Sending close message")
 				c.write(websocket.CloseMessage, []byte{})
 				return
 			}
-			log.Println("Sending text")
 			if err := c.write(websocket.TextMessage, message); err != nil {
 				return
 			}
 		case <-ticker.C:
-			log.Println("Sending ping")
 			if err := c.write(websocket.PingMessage, []byte{}); err != nil {
 				return
 			}
