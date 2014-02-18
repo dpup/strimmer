@@ -1,3 +1,6 @@
+// Copyright 2014 Daniel Pupius
+// Based on tutorial at http://gary.burd.info/go-websocket-chat
+
 package main
 
 import (
@@ -8,7 +11,7 @@ import (
 
 const (
 	WRITE_WAIT  = 10 * time.Second
-	PING_PERIOD = 45 * time.Second
+	PING_PERIOD = 15 * time.Second
 )
 
 type Conn struct {
@@ -23,7 +26,7 @@ func (c *Conn) write(messageType int, payload []byte) error {
 	return c.socket.WriteMessage(messageType, payload)
 }
 
-// writePump pumps messages sent from the hub on the connection's channel to the
+// WritePump pumps messages sent from the hub on the connection's channel to the
 // websocket connection.
 func (c *Conn) WritePump() {
 	ticker := time.NewTicker(PING_PERIOD)

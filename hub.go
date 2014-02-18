@@ -1,6 +1,10 @@
+// Copyright 2014 Daniel Pupius
+// Based on tutorial at http://gary.burd.info/go-websocket-chat
+
 package main
 
 import (
+	"container/ring"
 	"log"
 	"net/http"
 	"sync"
@@ -14,10 +18,12 @@ type Hub struct {
 	conns       map[*Conn]int
 	mu          sync.Mutex // protects conns
 	connCounter int
+	history     *ring.Ring
 }
 
-func NewHub() *Hub {
-	return &Hub{conns: make(map[*Conn]int)}
+// Creates a new hub for managing websocket connections.
+func NewHub(historySize int) *Hub {
+	return &Hub{conns: make(map[*Conn]int), history: ring.New(historySize)}
 }
 
 // Handle connection responds to a HTTP request and attempts to upgrade the
@@ -45,6 +51,15 @@ func (h *Hub) HandleConnection(w http.ResponseWriter, r *http.Request) {
 
 	conn := &Conn{output: make(chan []byte, 256), socket: socket, created: time.Now()}
 
+	// Send the history to clients when they connect.
+	h.history.Do(func(v interface{}) {
+		if v != nil {
+			if data, ok := v.([]byte); ok {
+				conn.output <- data
+			}
+		}
+	})
+
 	h.add(conn)
 	defer func() { h.remove(conn) }()
 	conn.WritePump()
@@ -62,6 +77,12 @@ func (h *Hub) Broadcast(data []byte) {
 			delete(h.conns, c)
 			close(c.output)
 		}
+	}
+
+	// Store the history.
+	if h.history.Len() > 0 {
+		h.history.Value = data
+		h.history = h.history.Next()
 	}
 }
 

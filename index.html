@@ -1,21 +1,157 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Strimmr</title>
+<title>Strimmer</title>
+<style>
+body {
+  background-color: #1A1A1F;
+  color: #999;
+}
+
+.canvas {
+  padding-top: 50px;
+}
+
+article {
+  max-width: 800px;
+  margin: 0 auto;
+
+  overflow-y: hidden;
+  transition: all 1s;
+}
+
+a {
+  color: #448866;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+a:hover {
+  color: #006600;
+  text-decoration: underline;
+}
+
+article h2, article p {
+  font: normal 28px/45px "Helvetica Neue";
+  letter-spacing: -0.02em;
+  margin: 0;
+  padding: 0;
+}
+
+time {
+  display: block;
+  font: normal 18px/45px "Helvetica Neue";
+  color: #666;
+}
+
+.content {
+  margin-bottom: 50px;
+}
+
+</style>
 </head>
 <body>
-<h1>Strimmr</h1>
+<div class="canvas">
+
+</div>
 <script>
-  if (window["WebSocket"]) {
+
+  var canvas = document.querySelector('.canvas')
+
+  function handleNewData(data) {
+    var item = JSON.parse(data)
+    item.Entries.forEach(function (entry) {
+      renderEntry(entry)
+    })
+  }
+
+  function renderEntry(entry) {
+    var article = document.createElement('article')
+    var h = document.createElement('h2')
+    var a = document.createElement('a')
+    a.href = entry.URL
+    a.target = '_blank'
+    a.appendChild(document.createTextNode(entry.Title))
+    h.appendChild(a)
+    h.appendChild(document.createTextNode(' by ' + entry.Author))
+    article.appendChild(h)
+
+    var content = document.createElement('div')
+    content.className = 'content'
+    content.innerHTML = entry.Description // Sanitize.
+
+    var time = document.createElement('time')
+    time.setAttribute('datetime', entry.Published)
+    time.innerHTML = relativeDate(entry.Published)
+    content.appendChild(time)
+
+    article.appendChild(content)
+
+    canvas.insertBefore(article, canvas.firstChild)
+
+    var height = article.offsetHeight
+    article.style.height = '0'
+    setTimeout(function () {
+      article.style.height = height + 'px'
+    }, 0)
+  }
+
+  function relativeDate(dateString) {
+    var diff = Date.now() - new Date(dateString)
+    diff /= 1000
+    if (diff < 60) return _relativeString(diff, 'second', 5)
+    diff /= 60
+    if (diff < 60) return _relativeString(diff, 'minute', 1)
+    diff /= 60
+    if (diff < 48) return _relativeString(diff, 'hour', 1)
+
+    return 'some time ago'
+  }
+
+  function _relativeString(count, unit, roundTo) {
+    count = Math.round(count / roundTo) * roundTo
+    return count + ' ' + unit + (count == 1 ? '' : 's') + ' ago'
+  }
+
+
+  var HISTORY = 50
+  setInterval(function () {
+
+    // Cleanup old entries that are below the fold every few seconds, but keep a
+    // browsable history.
+    var articles = document.getElementsByTagName('article')
+    for (var i = articles.length - 1; i >= HISTORY; i--) {
+      if (articles[i].getBoundingClientRect().top > document.documentElement.clientHeight) {
+        articles[i].parentNode.removeChild(articles[i])
+      } else {
+        // Everything else must be above the fold.
+        return
+      }
+    }
+
+    // Update <time> tags.
+    var times = document.getElementsByTagName('time')
+    for (var i = 0, n = times.length; i < n; i++) {
+      times[i].innerHTML = relativeDate(times[i].getAttribute('datetime'))
+    }
+
+  }, 5000)
+
+  // var sampleData = '{"Status":"Fetched (ping) 200 86400 and parsed 1/188 entries","Entries":[{"URL":"https://medium.com/p/af1f8d824834","Title":"Knowledge and Territory","Description":"<div class=\\\"medium-feed-item\\\"><p class=\\\"medium-feed-snippet\\\">There was an earlier time when our struggles were more physically defined.</p></div>","Author":"Johannes Nelson","Published":"2014-02-16T21:27:45.000Z","Updated":"2014-02-16T21:27:45.000Z"}]}'
+  // handleNewData(sampleData)
+
+
+  if (window['WebSocket']) {
     var conn = new WebSocket('ws://' + location.host + '/socket');
     conn.onclose = function(evt) {
       console.log('Connection closed', evt)
     }
     conn.onmessage = function(evt) {
-      console.log('Message recieved', evt)
+      console.log('Message received')
+      handleNewData(evt.data)
     }
   } else {
-    alert('Your browser doesn\'t support web sockets')
+    alert('Your browser doesn\'t support web sockets :-(')
   }
 </script>
 </body>
