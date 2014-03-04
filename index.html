@@ -3,6 +3,10 @@
 <head>
 <title>Strimmer</title>
 <style>
+html {
+  font-size: 24px;
+}
+
 body {
   background-color: #1A1A1F;
   color: #999;
@@ -13,7 +17,8 @@ body {
 }
 
 article {
-  max-width: 800px;
+  width: 80%;
+  max-width: 1200px;
   margin: 0 auto;
 
   overflow-y: hidden;
@@ -32,20 +37,19 @@ a:hover {
 }
 
 article h2, article p {
-  font: normal 28px/45px "Helvetica Neue";
-  letter-spacing: -0.02em;
+  font: normal 1.0rem/1.5rem "Helvetica Neue";
+  letter-spacing: -0.02rem;
   margin: 0;
   padding: 0;
 }
 
-time {
-  display: block;
-  font: normal 18px/45px "Helvetica Neue";
+.info {
+  font: normal 0.8rem/1.5rem "Helvetica Neue";
   color: #666;
 }
 
 .content {
-  margin-bottom: 50px;
+  margin-bottom: 1.0rem;
 }
 
 </style>
@@ -73,17 +77,20 @@ time {
     a.target = '_blank'
     a.appendChild(document.createTextNode(entry.Title))
     h.appendChild(a)
-    h.appendChild(document.createTextNode(' by ' + entry.Author))
     article.appendChild(h)
 
     var content = document.createElement('div')
     content.className = 'content'
     content.innerHTML = entry.Description // Sanitize.
 
+    var info = document.createElement('p')
+    info.className = 'info'
     var time = document.createElement('time')
     time.setAttribute('datetime', entry.Published)
     time.innerHTML = relativeDate(entry.Published)
-    content.appendChild(time)
+    info.appendChild(time)
+    info.appendChild(document.createTextNode(' by ' + entry.Author))
+    content.appendChild(info)
 
     article.appendChild(content)
 

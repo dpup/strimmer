@@ -5,7 +5,6 @@ package main
 import (
 	"encoding/json"
 	"encoding/xml"
-	"log"
 )
 
 // Sample item.
@@ -62,7 +61,6 @@ type Entry struct {
 // serializes it to JSON.
 func XMLFeedToJSON(data []byte) ([]byte, error) {
 	var feed Feed
-	log.Println(string(data))
 	err := xml.Unmarshal(data, &feed)
 	if err != nil {
 		return nil, err
