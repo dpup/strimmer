@@ -13,6 +13,9 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// TODO: Keep track of last message sent to each connection and send recent
+// history on reconnect.
+
 // Hub keeps a map of connections and broadcasts data to them.
 type Hub struct {
 	conns       map[*Conn]int
