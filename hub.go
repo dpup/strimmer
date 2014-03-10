@@ -33,10 +33,11 @@ func (h *Hub) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method nod allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if r.Header.Get("Origin") != "http://"+r.Host {
-		http.Error(w, "Origin not allowed", http.StatusForbidden)
-		return
-	}
+	// NOTE(dan): Allow cross-origin web sockets.
+	// if r.Header.Get("Origin") != "http://"+r.Host {
+	// 	http.Error(w, "Origin not allowed", http.StatusForbidden)
+	// 	return
+	// }
 
 	socket, err := websocket.Upgrade(w, r, nil, 1024, 1024)
 	if _, ok := err.(websocket.HandshakeError); ok {
@@ -68,7 +69,6 @@ func (h *Hub) HandleConnection(w http.ResponseWriter, r *http.Request) {
 // Broadcast sends data to each active connection.
 func (h *Hub) Broadcast(data []byte) {
 	defer h.lock()()
-	log.Printf("Broadcasting to %d connections : %s", len(h.conns), data)
 	for c, id := range h.conns {
 		select {
 		case c.output <- data:

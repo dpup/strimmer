@@ -3,7 +3,6 @@
 package main
 
 import (
-	"encoding/json"
 	"encoding/xml"
 )
 
@@ -59,12 +58,8 @@ type Entry struct {
 
 // XMLFeedToJSON unmarshals an RSS Feed using the Feed struct and then
 // serializes it to JSON.
-func XMLFeedToJSON(data []byte) ([]byte, error) {
+func XMLToFeed(data []byte) (Feed, error) {
 	var feed Feed
 	err := xml.Unmarshal(data, &feed)
-	if err != nil {
-		return nil, err
-	} else {
-		return json.Marshal(feed)
-	}
+	return feed, err
 }

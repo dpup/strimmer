@@ -3,6 +3,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"html/template"
@@ -28,11 +29,15 @@ func main() {
 	push := gohubbub.NewClient("http://medium.superfeedr.com", *host, *port, "Strimmr")
 	push.RegisterHandler(http.DefaultServeMux)
 	push.Subscribe("https://medium.com/feed/latest", func(contentType string, body []byte) {
-		json, err := XMLFeedToJSON(body)
+		feed, err := XMLToFeed(body)
 		if err != nil {
 			log.Println("Error processing hub response", err)
 		} else {
-			hub.Broadcast(json)
+			for _, entry := range feed.Entries {
+				log.Printf("Broadcasting to %d connections : %s", len(hub.conns), entry.Title)
+			}
+			jsonFeed, _ := json.Marshal(feed)
+			hub.Broadcast(jsonFeed)
 		}
 	})
 
@@ -42,7 +47,7 @@ func main() {
 	}()
 
 	// Start the PuSH client.
-	go push.Run()
+	go push.Start()
 
 	// Wait for user input before shutting down.
 
