@@ -26,9 +26,19 @@ func main() {
 	hub := NewHub(20)
 	http.HandleFunc("/socket", hub.HandleConnection)
 
-	push := gohubbub.NewClient("http://medium.superfeedr.com", *host, *port, "Strimmr")
+	push := gohubbub.NewClient(*host, *port, "Strimmr")
 	push.RegisterHandler(http.DefaultServeMux)
-	push.Subscribe("https://medium.com/feed/latest", func(contentType string, body []byte) {
+
+	// Start the default server.
+	go func() {
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), nil))
+	}()
+
+	// Start the PuSH client.
+	go push.Start()
+
+	// Subscribe to the feed.
+	err := push.DiscoverAndSubscribe("https://medium.com/feed/latest", func(contentType string, body []byte) {
 		feed, err := XMLToFeed(body)
 		if err != nil {
 			log.Println("Error processing hub response", err)
@@ -41,13 +51,9 @@ func main() {
 		}
 	})
 
-	// Start the default server.
-	go func() {
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), nil))
-	}()
-
-	// Start the PuSH client.
-	go push.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Wait for user input before shutting down.
 
