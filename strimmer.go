@@ -23,7 +23,7 @@ func main() {
 
 	http.HandleFunc("/", handleHome)
 
-	hub := NewHub(20)
+	hub := NewHub(20, true) // Add flags.
 	http.HandleFunc("/socket", hub.HandleConnection)
 
 	push := gohubbub.NewClient(*host, *port, "Strimmr")

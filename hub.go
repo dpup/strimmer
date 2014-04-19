@@ -5,6 +5,8 @@ package main
 
 import (
 	"container/ring"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -18,44 +20,39 @@ import (
 
 // Hub keeps a map of connections and broadcasts data to them.
 type Hub struct {
-	conns       map[*Conn]int
-	mu          sync.Mutex // protects conns
-	connCounter int
-	history     *ring.Ring
+	conns            map[*conn]int
+	mu               sync.Mutex // protects conns
+	connCounter      int
+	history          *ring.Ring
+	allowCrossOrigin bool
 }
 
 // Creates a new hub for managing websocket connections.
-func NewHub(historySize int) *Hub {
-	return &Hub{conns: make(map[*Conn]int), history: ring.New(historySize)}
+func NewHub(historySize int, allowCrossOrigin bool) *Hub {
+	return &Hub{
+		conns:            make(map[*conn]int),
+		history:          ring.New(historySize),
+		allowCrossOrigin: allowCrossOrigin,
+	}
 }
 
-// Handle connection responds to a HTTP request and attempts to upgrade the
+// HandleConnection responds to a HTTP request and attempts to upgrade the
 // request into a websocket connection.
 func (h *Hub) HandleConnection(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Method nod allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	// NOTE(dan): Allow cross-origin web sockets.
-	// if r.Header.Get("Origin") != "http://"+r.Host {
-	// 	http.Error(w, "Origin not allowed", http.StatusForbidden)
-	// 	return
-	// }
-
-	socket, err := websocket.Upgrade(w, r, nil, 1024, 1024)
-	if _, ok := err.(websocket.HandshakeError); ok {
-		log.Println("Not a websocket handshake")
-		http.Error(w, "Not a websocket handshake", http.StatusBadRequest)
-		return
-	} else if err != nil {
-		log.Println("Error upgrading socket", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	socket, err, statusCode := h.upgrade(w, r)
+	if err != nil {
+		log.Println("Error handling conncetion", err)
+		http.Error(w, err.Error(), statusCode)
 		return
 	}
 
-	conn := &Conn{output: make(chan []byte, 256), socket: socket, created: time.Now()}
+	conn := &conn{
+		output:  make(chan []byte, 256),
+		socket:  socket,
+		created: time.Now(),
+	}
 
-	// Send the history to clients when they connect.
+	// Send recent history to clients when they connect.
 	h.history.Do(func(v interface{}) {
 		if v != nil {
 			if data, ok := v.([]byte); ok {
@@ -65,13 +62,36 @@ func (h *Hub) HandleConnection(w http.ResponseWriter, r *http.Request) {
 	})
 
 	h.add(conn)
+
 	defer func() { h.remove(conn) }()
-	conn.WritePump()
+	conn.wait()
+}
+
+func (h *Hub) upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error, int) {
+	if r.Method != "GET" {
+		return nil, errors.New("method not allowed"), http.StatusMethodNotAllowed
+	}
+
+	if !h.allowCrossOrigin && r.Header.Get("Origin") != "http://"+r.Host {
+		return nil, errors.New("origin not allowed"), http.StatusMethodNotAllowed
+	}
+
+	socket, err := websocket.Upgrade(w, r, nil, 1024, 1024)
+	if _, ok := err.(websocket.HandshakeError); ok {
+		return nil, errors.New("not a websockethandshake"), http.StatusBadRequest
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("error upgrading socket %s", err), http.StatusInternalServerError
+	}
+
+	return socket, nil, http.StatusOK
 }
 
 // Broadcast sends data to each active connection.
 func (h *Hub) Broadcast(data []byte) {
 	defer h.lock()()
+
 	for c, id := range h.conns {
 		select {
 		case c.output <- data:
@@ -83,14 +103,12 @@ func (h *Hub) Broadcast(data []byte) {
 	}
 
 	// Store the history.
-	if h.history.Len() > 0 {
-		h.history.Value = data
-		h.history = h.history.Next()
-	}
+	h.history.Value = data
+	h.history = h.history.Next()
 }
 
 // add a new  connection.
-func (h *Hub) add(c *Conn) {
+func (h *Hub) add(c *conn) {
 	defer h.lock()()
 	h.connCounter++
 	h.conns[c] = h.connCounter
@@ -98,14 +116,14 @@ func (h *Hub) add(c *Conn) {
 }
 
 // remove a connection from the hub and closes its channel.
-func (h *Hub) remove(c *Conn) {
+func (h *Hub) remove(c *conn) {
 	defer h.lock()()
 	if id, exists := h.conns[c]; exists {
 		delete(h.conns, c)
 		close(c.output)
 		log.Printf("Connection %d removed", id)
 	} else {
-		log.Println("Unknown collection")
+		log.Println("Unknown connection")
 	}
 }
 

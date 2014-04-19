@@ -14,21 +14,21 @@ const (
 	PING_PERIOD = 15 * time.Second
 )
 
-type Conn struct {
+type conn struct {
 	socket  *websocket.Conn
 	output  chan []byte
 	created time.Time
 }
 
 // write writes a message with the given message type and payload.
-func (c *Conn) write(messageType int, payload []byte) error {
+func (c *conn) write(messageType int, payload []byte) error {
 	c.socket.SetWriteDeadline(time.Now().Add(WRITE_WAIT))
 	return c.socket.WriteMessage(messageType, payload)
 }
 
-// WritePump pumps messages sent from the hub on the connection's channel to the
-// websocket connection.
-func (c *Conn) WritePump() {
+// wait handles messages sent from the hub on the connection's channel to
+// the websocket connection.
+func (c *conn) wait() {
 	ticker := time.NewTicker(PING_PERIOD)
 	defer func() {
 		ticker.Stop()
