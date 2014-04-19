@@ -15,6 +15,7 @@ const (
 )
 
 type conn struct {
+	feedUrl string
 	socket  *websocket.Conn
 	output  chan []byte
 	created time.Time

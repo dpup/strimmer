@@ -3,15 +3,12 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"time"
-
-	"github.com/dpup/gohubbub"
 )
 
 var port = flag.Int("port", 3100, "Port to serve on")
@@ -23,47 +20,16 @@ func main() {
 
 	http.HandleFunc("/", handleHome)
 
-	hub := NewHub(20, true) // Add flags.
-	http.HandleFunc("/socket", hub.HandleConnection)
-
-	push := gohubbub.NewClient(*host, *port, "Strimmr")
-	push.RegisterHandler(http.DefaultServeMux)
-
-	// Start the default server.
-	go func() {
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), nil))
-	}()
-
-	// Start the PuSH client.
-	go push.Start()
-
-	// Subscribe to the feed.
-	err := push.DiscoverAndSubscribe("https://medium.com/feed/latest", func(contentType string, body []byte) {
-		feed, err := XMLToFeed(body)
-		if err != nil {
-			log.Println("Error processing hub response", err)
-		} else {
-			for _, entry := range feed.Entries {
-				log.Printf("Broadcasting to %d connections : %s", len(hub.conns), entry.Title)
-			}
-			jsonFeed, _ := json.Marshal(feed)
-			hub.Broadcast(jsonFeed)
-		}
-	})
-
-	if err != nil {
-		log.Fatal(err)
-	}
+	bridge := NewBridge(20, true) // Add flags.
+	go bridge.Start(*host, *port)
 
 	// Wait for user input before shutting down.
-
 	log.Println("Press Enter for graceful shutdown...")
 
 	var input string
 	fmt.Scanln(&input)
 
-	push.Unsubscribe("https://medium.com/feed/latest")
-
+	bridge.Shutdown()
 	time.Sleep(time.Second * 5)
 }
 

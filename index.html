@@ -149,7 +149,7 @@ article h2, article p {
 
 
   function openConnection() {
-    var conn = new WebSocket('ws://' + location.host + '/socket');
+    var conn = new WebSocket('ws://' + location.host + '/socket?feed=http://push-pub.appspot.com/feed');
     conn.onclose = function(evt) {
       console.log('Connection closed', evt)
       setTimeout(openConnection, 5000)
