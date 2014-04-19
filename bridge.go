@@ -42,7 +42,7 @@ func (b *Bridge) Start(host string, port int) {
 	b.pushClient = gohubbub.NewClient(host, port, "strimmr")
 	b.pushClient.RegisterHandler(http.DefaultServeMux)
 	go b.pushClient.Start()
-	http.HandleFunc("/socket", b.HandleConnection)
+	http.HandleFunc("/bridge", b.HandleConnection)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
 }
 
