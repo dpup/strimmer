@@ -8,11 +8,10 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"time"
 )
 
-var port = flag.Int("port", 3100, "Port to serve on")
-var host = flag.String("host", "", "Host or IP to serve from")
+var port = flag.Int("port", 3100, "Port to listen on")
+var host = flag.String("host", "", "Host or IP of the server")
 var index = template.Must(template.ParseFiles("index.html"))
 
 func main() {
@@ -30,7 +29,6 @@ func main() {
 	fmt.Scanln(&input)
 
 	bridge.Shutdown()
-	time.Sleep(time.Second * 5)
 }
 
 func handleHome(w http.ResponseWriter, r *http.Request) {

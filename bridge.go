@@ -39,17 +39,18 @@ func NewBridge(historySize int, allowCrossOrigin bool) *Bridge {
 // ListenAndServe.
 func (b *Bridge) Start(host string, port int) {
 	log.Printf("Setting up server on %s:%d", host, port)
-	b.pushClient = gohubbub.NewClient(host, port, "strimmr")
+	b.pushClient = gohubbub.NewClient(host, port, "strimmer")
 	b.pushClient.RegisterHandler(http.DefaultServeMux)
 	go b.pushClient.Start()
 	http.HandleFunc("/bridge", b.HandleConnection)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
 }
 
+// Shutdown closes websockets and removes PuSH subscriptions.
 func (b *Bridge) Shutdown() {
 	log.Println("Shutting down...")
 	for c, _ := range b.conns {
-		b.remove(c) // Triggers remove.
+		b.remove(c)
 	}
 }
 
