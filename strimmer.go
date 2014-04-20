@@ -4,9 +4,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 )
 
@@ -20,15 +18,7 @@ func main() {
 	http.HandleFunc("/", handleHome)
 
 	bridge := NewBridge(20, true) // Add flags.
-	go bridge.Start(*host, *port)
-
-	// Wait for user input before shutting down.
-	log.Println("Press Enter for graceful shutdown...")
-
-	var input string
-	fmt.Scanln(&input)
-
-	bridge.Shutdown()
+	bridge.Start(*host, *port)
 }
 
 func handleHome(w http.ResponseWriter, r *http.Request) {

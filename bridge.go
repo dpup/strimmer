@@ -9,7 +9,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/dpup/gohubbub"
@@ -42,6 +45,7 @@ func (b *Bridge) Start(host string, port int) {
 	b.pushClient = gohubbub.NewClient(host, port, "strimmer")
 	b.pushClient.RegisterHandler(http.DefaultServeMux)
 	go b.pushClient.Start()
+	b.watchSignals()
 	http.HandleFunc("/bridge", b.HandleConnection)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
 }
@@ -194,6 +198,21 @@ func (b *Bridge) checkFeedHasClients(feedUrl string) {
 	if b.pushClient.HasSubscription(feedUrl) {
 		b.pushClient.Unsubscribe(feedUrl)
 	}
+}
+
+// watchSignals handles various signals and gracefully shuts down the brige by
+// disonnecting clients and unsubscribing from the hub.
+func (b *Bridge) watchSignals() {
+	log.Println("Waiting for shutdown")
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGHUP,
+		syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	go func() {
+		sig := <-c
+		log.Printf("Captured signal %v", sig)
+		b.Shutdown()
+		os.Exit(1)
+	}()
 }
 
 // lock locks the mutex and returns unlock as a function for use with defer.
