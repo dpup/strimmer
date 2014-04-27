@@ -6,19 +6,20 @@ import (
 	"flag"
 	"html/template"
 	"net/http"
+
+	"github.com/dpup/strimmer/bridge"
 )
 
 var port = flag.Int("port", 3100, "Port to listen on")
 var host = flag.String("host", "", "Host or IP of the server")
-var index = template.Must(template.ParseFiles("index.html"))
 
 func main() {
 	flag.Parse()
 
 	http.HandleFunc("/", handleHome)
 
-	bridge := NewBridge(20, true) // Add flags.
-	bridge.Start(*host, *port)
+	b := bridge.NewBridge(20, true) // Add flags.
+	b.Start(*host, *port)
 }
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
@@ -31,5 +32,6 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	index := template.Must(template.ParseFiles("index.html"))
 	index.Execute(w, nil)
 }

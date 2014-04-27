@@ -2,9 +2,15 @@
 <html>
 <head>
 <title>Strimmer</title>
+<!--
+This HTML page provides a very simple WebSocket client, that can be used to
+connect to the bridge. The default feed is from http://push-pub.appspot.com and
+allows you to send test items.  The bridge location should be a publicly
+accessible host or IP that routes to your bridge.
+-->
 <style>
 html {
-  font-size: 24px;
+  font-size: 18px;
 }
 
 body {
@@ -12,15 +18,18 @@ body {
   color: #222;
 }
 
-.canvas {
-  padding-top: 50px;
-}
-
-article {
+#canvas, #form {
+  padding-top: 25px;
   width: 80%;
   max-width: 1200px;
   margin: 0 auto;
+}
 
+#form, #form input, #form button {
+  font: normal 0.8rem/1rem "Helvetica Neue";
+}
+
+article {
   overflow-y: hidden;
   transition: all 1s;
 }
@@ -37,8 +46,8 @@ a:hover {
 }
 
 article h2, article p {
-  font: normal 1.0rem/1.5rem "Helvetica Neue";
-  letter-spacing: -0.02rem;
+  font: normal 1rem/1.5rem "Helvetica Neue";
+  letter-spacing: -0.02em;
   margin: 0;
   padding: 0;
 }
@@ -52,15 +61,32 @@ article h2, article p {
   margin-bottom: 1.0rem;
 }
 
+input {
+  width: 300px;
+}
+
 </style>
 </head>
 <body>
-<div class="canvas">
+<div id="form">
+  <input id="bridge" placeholder="bridge.myhost.com:3100"> Bridge location<br>
+  <input id="feed" value="http://push-pub.appspot.com/feed"> Feed URL<br>
+  <button id="btn">Subscribe</button>
+</div>
+<div id="canvas">
 
 </div>
 <script>
+  var formEl = document.getElementById('form')
+  var canvas = document.getElementById('canvas')
 
-  var canvas = document.querySelector('.canvas')
+  document.getElementById('btn').addEventListener('click', function (e) {
+    openConnection(
+        document.getElementById('bridge').value,
+        document.getElementById('feed').value)
+  }, false)
+
+  document.getElementById('bridge').value = location.host
 
   function handleNewData(data) {
     var item = JSON.parse(data)
@@ -72,11 +98,15 @@ article h2, article p {
   function renderEntry(entry) {
     var article = document.createElement('article')
     var h = document.createElement('h2')
-    var a = document.createElement('a')
-    a.href = entry.URL
-    a.target = '_blank'
-    a.appendChild(document.createTextNode(entry.Title))
-    h.appendChild(a)
+    if (entry.URL) {
+      var a = document.createElement('a')
+      a.href = entry.URL
+      a.target = '_blank'
+      a.appendChild(document.createTextNode(entry.Title))
+      h.appendChild(a)
+    } else {
+      h.appendChild(document.createTextNode(entry.Title))
+    }
     article.appendChild(h)
 
     var content = document.createElement('div')
@@ -147,23 +177,25 @@ article h2, article p {
   // var sampleData = '{"Status":"Fetched (ping) 200 86400 and parsed 1/188 entries","Entries":[{"URL":"https://medium.com/p/af1f8d824834","Title":"Knowledge and Territory","Description":"<div class=\\\"medium-feed-item\\\"><p class=\\\"medium-feed-snippet\\\">There was an earlier time when our struggles were more physically defined.</p></div>","Author":"Johannes Nelson","Published":"2014-02-16T21:27:45.000Z","Updated":"2014-02-16T21:27:45.000Z"}]}'
   // handleNewData(sampleData)
 
-
-  function openConnection() {
-    var conn = new WebSocket('ws://' + location.host + '/bridge?feed=http://push-pub.appspot.com/feed');
+  function openConnection(bridge, feed) {
+    var conn = new WebSocket('ws://' + bridge + '/bridge?feed=' +
+        encodeURIComponent(feed))
     conn.onclose = function(evt) {
       console.log('Connection closed', evt)
-      setTimeout(openConnection, 5000)
+      renderEntry({
+        Title: 'Disconnected from ' + feed,
+        Published: new Date().toISOString(),
+        Author: 'System',
+        Description: ''
+      })
     }
     conn.onmessage = function(evt) {
       console.log('Message received')
       handleNewData(evt.data)
     }
-
   }
 
-  if (window['WebSocket']) {
-    openConnection()
-  } else {
+  if (!window['WebSocket']) {
     alert('Your browser doesn\'t support web sockets :-(')
   }
 </script>

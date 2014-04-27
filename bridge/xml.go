@@ -1,6 +1,6 @@
 // Copyright 2014 Daniel Pupius
 
-package main
+package bridge
 
 import (
 	"encoding/xml"

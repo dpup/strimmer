@@ -1,7 +1,7 @@
 // Copyright 2014 Daniel Pupius
 // Based on tutorial at http://gary.burd.info/go-websocket-chat
 
-package main
+package bridge
 
 import (
 	"time"

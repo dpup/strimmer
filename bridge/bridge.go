@@ -1,7 +1,11 @@
 // Copyright 2014 Daniel Pupius
-// Based on tutorial at http://gary.burd.info/go-websocket-chat
 
-package main
+// Package bridge sets up a web server which will act as a PubsubHubBub to
+// WebSocket bridge.  WebSocket clients can connect to /bridge?feed=FEED_URL in
+// order to be notifed of updates published to the feed's hub.
+//
+// Based on tutorial at http://gary.burd.info/go-websocket-chat
+package bridge
 
 import (
 	"encoding/json"
@@ -21,19 +25,17 @@ import (
 
 // Bridge keeps broadcasts messages recieved from PuSH to websocket clients.
 type Bridge struct {
-	pushClient  *gohubbub.Client
-	conns       map[*conn]int
-	mu          sync.Mutex // protects conns
-	connCounter int
-	// history          *ring.Ring
+	pushClient       *gohubbub.Client
+	conns            map[*conn]int
+	mu               sync.Mutex // protects conns
+	connCounter      int
 	allowCrossOrigin bool
 }
 
 // Creates a new hub for managing websocket connections.
 func NewBridge(historySize int, allowCrossOrigin bool) *Bridge {
 	return &Bridge{
-		conns: make(map[*conn]int),
-		// history:          ring.New(historySize),
+		conns:            make(map[*conn]int),
 		allowCrossOrigin: allowCrossOrigin,
 	}
 }
@@ -62,7 +64,6 @@ func (b *Bridge) Shutdown() {
 // request into a websocket connection.
 func (b *Bridge) HandleConnection(w http.ResponseWriter, r *http.Request) {
 	feedUrl := r.URL.Query().Get("feed")
-
 	log.Println(r.URL, feedUrl)
 
 	if !b.pushClient.HasSubscription(feedUrl) {
@@ -80,7 +81,7 @@ func (b *Bridge) HandleConnection(w http.ResponseWriter, r *http.Request) {
 
 	socket, err, statusCode := b.upgrade(w, r)
 	if err != nil {
-		log.Println("Error handling conncetion,", err)
+		log.Println("Error upgrading connection,", err)
 		http.Error(w, err.Error(), statusCode)
 		return
 	}
@@ -91,15 +92,6 @@ func (b *Bridge) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		socket:  socket,
 		created: time.Now(),
 	}
-
-	// Send recent history to clients when they connect.
-	// b.history.Do(func(v interface{}) {
-	// 	if v != nil {
-	// 		if data, ok := v.([]byte); ok {
-	// 			conn.output <- data
-	// 		}
-	// 	}
-	// })
 
 	b.add(conn)
 
@@ -118,7 +110,7 @@ func (b *Bridge) upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Con
 
 	socket, err := websocket.Upgrade(w, r, nil, 1024, 1024)
 	if _, ok := err.(websocket.HandshakeError); ok {
-		return nil, errors.New("not a websockethandshake"), http.StatusBadRequest
+		return nil, errors.New("not a websocket handshake"), http.StatusBadRequest
 	}
 
 	if err != nil {
@@ -203,13 +195,19 @@ func (b *Bridge) checkFeedHasClients(feedUrl string) {
 // watchSignals handles various signals and gracefully shuts down the brige by
 // disonnecting clients and unsubscribing from the hub.
 func (b *Bridge) watchSignals() {
-	log.Println("Waiting for shutdown")
 	c := make(chan os.Signal, 2)
 	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGHUP,
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	go func() {
 		sig := <-c
 		log.Printf("Captured signal %v", sig)
+
+		// If shutdown takes more than 10s, just give up.
+		time.AfterFunc(10*time.Second, func() {
+			log.Println("Graceful shutdown failed")
+			os.Exit(2)
+		})
+
 		b.Shutdown()
 		os.Exit(1)
 	}()
