@@ -4,6 +4,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"html/template"
 	"net/http"
 
@@ -11,15 +12,21 @@ import (
 )
 
 var port = flag.Int("port", 3100, "Port to listen on")
-var host = flag.String("host", "", "Host or IP of the server")
+var addr = flag.String("addr", "", "Hostname or IP of the server")
+var self = flag.String("self", "", "Address that remote clients should connect to")
 
 func main() {
 	flag.Parse()
 
 	http.HandleFunc("/", handleHome)
 
+	s := *self
+	if s == "" {
+		s = fmt.Sprintf("%s:%d", *addr, *port)
+	}
+
 	b := bridge.NewBridge(20, true) // Add flags.
-	b.Start(*host, *port)
+	b.Start(s, *addr, *port)
 }
 
 func handleHome(w http.ResponseWriter, r *http.Request) {

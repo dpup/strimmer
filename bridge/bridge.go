@@ -4,7 +4,7 @@
 // WebSocket bridge.  WebSocket clients can connect to /bridge?feed=FEED_URL in
 // order to be notifed of updates published to the feed's hub.
 //
-// Based on tutorial at http://gary.burd.info/go-websocket-chat
+// Websocket code based on tutorial at http://gary.burd.info/go-websocket-chat
 package bridge
 
 import (
@@ -42,14 +42,17 @@ func NewBridge(historySize int, allowCrossOrigin bool) *Bridge {
 
 // Start registers handles on DefaultServeMux and starts up a HTTP server using
 // ListenAndServe.
-func (b *Bridge) Start(host string, port int) {
-	log.Printf("Setting up server on %s:%d", host, port)
-	b.pushClient = gohubbub.NewClient(host, port, "strimmer")
+// 'self' the host and ip that remote clients should connect to.
+// 'addr' ip address that the server should listen on, "" is default.
+// 'port' that the server should listen on.
+func (b *Bridge) Start(self string, addr string, port int) {
+	log.Printf("Setting up server on %s:%d", addr, port)
+	b.pushClient = gohubbub.NewClient(self, "strimmer")
 	b.pushClient.RegisterHandler(http.DefaultServeMux)
 	go b.pushClient.Start()
 	b.watchSignals()
 	http.HandleFunc("/bridge", b.HandleConnection)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%d", addr, port), nil))
 }
 
 // Shutdown closes websockets and removes PuSH subscriptions.
