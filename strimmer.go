@@ -5,7 +5,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"html/template"
 	"net/http"
 
 	"github.com/dpup/strimmer/bridge"
@@ -19,6 +18,7 @@ func main() {
 	flag.Parse()
 
 	http.HandleFunc("/", handleHome)
+	http.HandleFunc("/styles.css", handleStyles)
 
 	s := *self
 	if s == "" {
@@ -30,15 +30,9 @@ func main() {
 }
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-	if r.Method != "GET" {
-		http.Error(w, "Method nod allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	index := template.Must(template.ParseFiles("index.html"))
-	index.Execute(w, nil)
+	http.ServeFile(w, r, "index.html")
+}
+
+func handleStyles(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "styles.css")
 }

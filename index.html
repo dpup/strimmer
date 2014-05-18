@@ -2,202 +2,170 @@
 <html>
 <head>
 <title>Strimmer</title>
-<!--
-This HTML page provides a very simple WebSocket client, that can be used to
-connect to the bridge. The default feed is from http://push-pub.appspot.com and
-allows you to send test items.  The bridge location should be a publicly
-accessible host or IP that routes to your bridge.
--->
-<style>
-html {
-  font-size: 18px;
-}
-
-body {
-  background-color: #FFF;
-  color: #222;
-}
-
-#canvas, #form {
-  padding-top: 25px;
-  width: 80%;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-#form, #form input, #form button {
-  font: normal 0.8rem/1rem "Helvetica Neue";
-}
-
-article {
-  overflow-y: hidden;
-  transition: all 1s;
-}
-
-a {
-  color: #448866;
-  text-decoration: none;
-  font-weight: bold;
-}
-
-a:hover {
-  color: #006600;
-  text-decoration: underline;
-}
-
-article h2, article p {
-  font: normal 1rem/1.5rem "Helvetica Neue";
-  letter-spacing: -0.02em;
-  margin: 0;
-  padding: 0;
-}
-
-.info {
-  font: normal 0.8rem/1.5rem "Helvetica Neue";
-  color: #666;
-}
-
-.content {
-  margin-bottom: 1.0rem;
-}
-
-input {
-  width: 300px;
-}
-
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div id="form">
-  <input id="bridge" placeholder="bridge.myhost.com:3100"> Bridge location<br>
-  <input id="feed" value="http://push-pub.appspot.com/feed"> Feed URL<br>
-  <button id="btn">Subscribe</button>
-</div>
-<div id="canvas">
-
-</div>
 <script>
-  var formEl = document.getElementById('form')
-  var canvas = document.getElementById('canvas')
-
-  document.getElementById('btn').addEventListener('click', function (e) {
-    openConnection(
-        document.getElementById('bridge').value,
-        document.getElementById('feed').value)
-  }, false)
-
-  document.getElementById('bridge').value = location.host
-
-  function handleNewData(data) {
-    var item = JSON.parse(data)
-    item.Entries.forEach(function (entry) {
-      renderEntry(entry)
-    })
-  }
-
-  function renderEntry(entry) {
-    var article = document.createElement('article')
-    var h = document.createElement('h2')
-    if (entry.URL) {
-      var a = document.createElement('a')
-      a.href = entry.URL
-      a.target = '_blank'
-      a.appendChild(document.createTextNode(entry.Title))
-      h.appendChild(a)
-    } else {
-      h.appendChild(document.createTextNode(entry.Title))
-    }
-    article.appendChild(h)
-
-    var content = document.createElement('div')
-    content.className = 'content'
-    content.innerHTML = entry.Description // Sanitize.
-
-    var info = document.createElement('p')
-    info.className = 'info'
-    var time = document.createElement('time')
-    time.setAttribute('datetime', entry.Published)
-    time.innerHTML = relativeDate(entry.Published)
-    info.appendChild(time)
-    info.appendChild(document.createTextNode(' by ' + entry.Author))
-    content.appendChild(info)
-
-    article.appendChild(content)
-
-    canvas.insertBefore(article, canvas.firstChild)
-
-    var height = article.offsetHeight
-    article.style.height = '0'
-    setTimeout(function () {
-      article.style.height = height + 'px'
-    }, 0)
-  }
-
-  function relativeDate(dateString) {
-    var diff = Date.now() - new Date(dateString)
-    diff /= 1000
-    if (diff < 60) return _relativeString(diff, 'second', 5)
-    diff /= 60
-    if (diff < 60) return _relativeString(diff, 'minute', 1)
-    diff /= 60
-    if (diff < 48) return _relativeString(diff, 'hour', 1)
-
-    return 'some time ago'
-  }
-
-  function _relativeString(count, unit, roundTo) {
-    count = Math.round(count / roundTo) * roundTo
-    return count + ' ' + unit + (count == 1 ? '' : 's') + ' ago'
-  }
-
-
-  var HISTORY = 50
-  setInterval(function () {
-
-    // Cleanup old entries that are below the fold every few seconds, but keep a
-    // browsable history.
-    var articles = document.getElementsByTagName('article')
-    for (var i = articles.length - 1; i >= HISTORY; i--) {
-      if (articles[i].getBoundingClientRect().top > document.documentElement.clientHeight) {
-        articles[i].parentNode.removeChild(articles[i])
-      } else {
-        // Everything else must be above the fold.
-        return
-      }
-    }
-
-    // Update <time> tags.
-    var times = document.getElementsByTagName('time')
-    for (var i = 0, n = times.length; i < n; i++) {
-      times[i].innerHTML = relativeDate(times[i].getAttribute('datetime'))
-    }
-
-  }, 5000)
-
-  // var sampleData = '{"Status":"Fetched (ping) 200 86400 and parsed 1/188 entries","Entries":[{"URL":"https://medium.com/p/af1f8d824834","Title":"Knowledge and Territory","Description":"<div class=\\\"medium-feed-item\\\"><p class=\\\"medium-feed-snippet\\\">There was an earlier time when our struggles were more physically defined.</p></div>","Author":"Johannes Nelson","Published":"2014-02-16T21:27:45.000Z","Updated":"2014-02-16T21:27:45.000Z"}]}'
-  // handleNewData(sampleData)
-
-  function openConnection(bridge, feed) {
-    var conn = new WebSocket('ws://' + bridge + '/bridge?feed=' +
-        encodeURIComponent(feed))
-    conn.onclose = function(evt) {
-      console.log('Connection closed', evt)
-      renderEntry({
-        Title: 'Disconnected from ' + feed,
-        Published: new Date().toISOString(),
-        Author: 'System',
-        Description: ''
-      })
-    }
-    conn.onmessage = function(evt) {
-      console.log('Message received')
-      handleNewData(evt.data)
-    }
-  }
-
-  if (!window['WebSocket']) {
-    alert('Your browser doesn\'t support web sockets :-(')
-  }
+  var sampleData = JSON.parse('{"Status":"Fetched (ping) 200 86400 and parsed 1/188 entries","Entries":[{"URL":"https://medium.com/p/af1f8d824834","Title":"Knowledge and Territory","Description":"<div class=\\\"medium-feed-item\\\"><p class=\\\"medium-feed-snippet\\\">There was an earlier time when our struggles were more physically defined.</p></div>","Author":"Johannes Nelson","Published":"2014-05-18T04:01:15.000Z","Updated":"2014-02-16T21:27:45.000Z"}]}')
 </script>
+<script type="text/jsx">
+/** @jsx React.DOM */
+
+/**
+ * Provides a very simple WebSocket client, that can be used to connect to the
+ * bridge. The default feed is from http://push-pub.appspot.com and allows you
+ * to send test items.  The bridge location should be a publicly accessible host
+ * or IP that routes to your bridge.
+ *
+ * See https://github.com/dpup/strimmer for more details.
+ */
+var App = React.createClass({
+  render: function () {
+    var items = [sampleData.Entries[0]]
+    return (
+      <div>
+        <Form onSubscribe={this.onSubscribe} />
+        <Stream items={items} ref="stream" />
+      </div>
+    );
+  },
+  onSubscribe: function (state) {
+    var conn = new WebSocket('ws://' + state.bridgeURL + '/bridge?feed=' + encodeURIComponent(state.feedURL));
+    conn.onclose = function (e) {
+      this.addItem({
+        Title: 'Disconnected from ' + state.feedURL,
+        Published: new Date().toISOString(),
+      });
+    }.bind(this);
+    conn.onmessage = function (e) {
+      try {
+        JSON.parse(e.data).Entries.forEach(this.addItem);
+      } catch (err) {
+        console.error('Invalid message:', err, e.data);
+      }
+    }.bind(this);
+    this.addItem({
+      Title: 'Connected to ' + state.feedURL,
+      Published: new Date().toISOString(),
+    });
+  },
+  addItem: function (item) {
+    this.refs.stream.addItem(item);
+  }
+});
+
+
+/**
+ * Form is a component that handles user input for subscribing to a new feed.
+ */
+var Form = React.createClass({
+  mixins: [React.addons.LinkedStateMixin],
+  getInitialState: function () {
+    return {
+      bridgeURL: location.host,
+      feedURL: 'http://push-pub.appspot.com/feed'
+    };
+  },
+  render: function () {
+    return (
+      <div className="form">
+        <input valueLink={this.linkState('bridgeURL')} placeholder="my.bridge.com:1234" /> Bridge location<br />
+        <input valueLink={this.linkState('feedURL')} /> Feed URL<br />
+        <button onClick={this.onSubscribeClicked}>Subscribe</button>
+      </div>
+    );
+  },
+  onSubscribeClicked: function (e) {
+    this.props.onSubscribe(this.state)
+  }
+});
+
+
+/**
+ * Stream is a component that renders a list of feed items.
+ */
+var Stream = React.createClass({
+  addItem: function (item) {
+    item.Id = item.URL || Math.random();
+    // TOOD(dan): This seems a bit of an ugly way to do this.
+    var items = [item].concat(this.state.items);
+    items.length = Math.min(items.length, 50);
+    this.setState({items: items});
+  },
+  getInitialState: function () {
+    return {
+      now: Date.now(),
+      items: []
+    };
+  },
+  componentDidMount: function() {
+    this.interval = setInterval(this.tick, 1000);
+  },
+  componentWillUnmount: function() {
+    clearInterval(this.interval);
+  },
+  render: function () {
+    var now = this.state.now;
+    var items = this.state.items;
+    return (
+      <div className="canvas">
+        {items.map(function (item) {
+          if (item.URL) {
+            // Feed item.
+            return (
+              <article key={item.Id}>
+                <h2><a href={item.URL} target="_blank">{item.Title}</a></h2>
+                <div className="content">
+                  <span dangerouslySetInnerHTML={{__html: item.Description}} />
+                  <p className="info">
+                    <time dateTime={item.Published}>
+                      {this.relativeDate(item.Published, now)}
+                    </time> by {item.Author}
+                  </p>
+                </div>
+              </article>
+            );
+          } else {
+            // System message.
+            return (
+              <article key={item.Id}>
+                <p className="info">{item.Title}</p>
+              </article>
+            );
+          }
+        }.bind(this))}
+      </div>
+    );
+  },
+  tick: function () {
+    this.setState({now: Date.now()});
+  },
+  relativeDate: function (dateString, now) {
+    var diff = now - new Date(dateString);
+    diff /= 1000;
+    if (diff < 60) return this.relativeString(diff, 'second', 5);
+    diff /= 60;
+    if (diff < 60) return this.relativeString(diff, 'minute', 1);
+    diff /= 60;
+    if (diff < 48) return this.relativeString(diff, 'hour', 1);
+    return 'some time ago';
+  },
+  relativeString: function (count, unit, roundTo) {
+    count = Math.round(count / roundTo) * roundTo;
+    return count + ' ' + unit + (count == 1 ? '' : 's') + ' ago';
+  }
+})
+
+
+React.renderComponent(
+  <App />,
+  document.body
+);
+
+</script>
+
+<!-- Obviously not intended for production use. -->
+<script src="http://fb.me/react-with-addons-0.10.0.js"></script>
+<script src="http://fb.me/JSXTransformer-0.10.0.js"></script>
 </body>
 </html>
