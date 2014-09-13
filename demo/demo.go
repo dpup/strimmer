@@ -17,8 +17,7 @@ var self = flag.String("self", "", "Address that remote clients should connect t
 func main() {
 	flag.Parse()
 
-	http.HandleFunc("/", handleHome)
-	http.HandleFunc("/styles.css", handleStyles)
+	http.Handle("/", http.FileServer(http.Dir("./")))
 
 	s := *self
 	if s == "" {
@@ -27,12 +26,4 @@ func main() {
 
 	b := bridge.NewBridge(20, true) // Add flags.
 	b.Start(s, *addr, *port)
-}
-
-func handleHome(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "index.html")
-}
-
-func handleStyles(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "styles.css")
 }

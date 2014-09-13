@@ -1,14 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Strimmer</title>
-<link rel="stylesheet" href="styles.css">
-</head>
-<body>
-<script>
-  var sampleData = JSON.parse('{"Status":"Fetched (ping) 200 86400 and parsed 1/188 entries","Entries":[{"URL":"https://medium.com/p/af1f8d824834","Title":"Knowledge and Territory","Description":"<div class=\\\"medium-feed-item\\\"><p class=\\\"medium-feed-snippet\\\">There was an earlier time when our struggles were more physically defined.</p></div>","Author":"Johannes Nelson","Published":"2014-05-18T04:01:15.000Z","Updated":"2014-02-16T21:27:45.000Z"}]}')
-</script>
-<script type="text/jsx">
 /** @jsx React.DOM */
 
 /**
@@ -21,7 +10,7 @@
  */
 var App = React.createClass({
   render: function () {
-    var items = [sampleData.Entries[0]]
+    var items = []
     return (
       <div>
         <Form onSubscribe={this.onSubscribe} />
@@ -39,7 +28,7 @@ var App = React.createClass({
     }.bind(this);
     conn.onmessage = function (e) {
       try {
-        JSON.parse(e.data).Entries.forEach(this.addItem);
+        (JSON.parse(e.data).Entries || []).forEach(this.addItem);
       } catch (err) {
         console.error('Invalid message:', err, e.data);
       }
@@ -87,10 +76,17 @@ var Form = React.createClass({
 var Stream = React.createClass({
   addItem: function (item) {
     item.Id = item.URL || Math.random();
-    // TOOD(dan): This seems a bit of an ugly way to do this.
-    var items = [item].concat(this.state.items);
-    items.length = Math.min(items.length, 50);
-    this.setState({items: items});
+    var exists = this.state.items.some(function (o) {
+      return o.Id === item.Id
+    })
+    if (!exists) {
+      // TOOD(dan): This seems a bit of an ugly way to do this.
+      var items = [item].concat(this.state.items);
+      items.length = Math.min(items.length, 50);
+      this.setState({items: items});
+    } else {
+      console.log('Duplicate item recieved', item.URL)
+    }
   },
   getInitialState: function () {
     return {
@@ -161,11 +157,3 @@ React.renderComponent(
   <App />,
   document.body
 );
-
-</script>
-
-<!-- Obviously not intended for production use. -->
-<script src="http://fb.me/react-with-addons-0.10.0.js"></script>
-<script src="http://fb.me/JSXTransformer-0.10.0.js"></script>
-</body>
-</html>
