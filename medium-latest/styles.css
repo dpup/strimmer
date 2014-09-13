@@ -1,0 +1,55 @@
+html {
+  font-size: 18px;
+}
+
+body {
+  background-color: #FFF;
+  color: #222;
+}
+
+.canvas, .form {
+  padding-top: 25px;
+  width: 80%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.form, .form input, .form button {
+  font: normal 0.8rem/1rem "Helvetica Neue";
+}
+
+article {
+  overflow-y: hidden;
+  transition: all 1s;
+}
+
+a {
+  color: #448866;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+a:hover {
+  color: #006600;
+  text-decoration: underline;
+}
+
+article h2, article p {
+  font: normal 1rem/1.5rem "Helvetica Neue";
+  letter-spacing: -0.02em;
+  margin: 0;
+  padding: 0;
+}
+
+.info {
+  font: normal 0.8rem/1.5rem "Helvetica Neue";
+  color: #666;
+}
+
+.content {
+  margin-bottom: 1.0rem;
+}
+
+input {
+  width: 300px;
+}

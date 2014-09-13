@@ -1,0 +1,16 @@
+[Unit]
+Description=strimmer.endoflow.com server
+After=docker.service
+Requires=docker.service
+
+[Service]
+User=core
+Restart=always
+TimeoutSec=180
+
+ExecStartPre=/usr/bin/docker pull pupius/strimmer
+ExecStart=/usr/bin/docker run --rm --name strimmer -p 5010:80 pupius/strimmer
+ExecStop=/usr/bin/docker rm -f strimmer
+
+[Install]
+WantedBy=multi-user.target
