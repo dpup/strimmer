@@ -20,12 +20,19 @@ var App = React.createClass({
   },
   onSubscribe: function (state) {
     var conn = new WebSocket('ws://' + state.bridgeURL + '/bridge?feed=' + encodeURIComponent(state.feedURL));
+    conn.onopen = function (e) {
+      console.log('Connection open')
+    }
     conn.onclose = function (e) {
+      console.log('Connection closed:', e.code, e.reason, e.wasClean ? '' : '(hangup)')
       this.addItem({
         Title: 'Disconnected from ' + state.feedURL,
         Published: new Date().toISOString(),
       });
     }.bind(this);
+    conn.onerror = function (err) {
+      console.error('Websocket error:', err)
+    }
     conn.onmessage = function (e) {
       try {
         (JSON.parse(e.data).Entries || []).forEach(this.addItem);
@@ -34,7 +41,7 @@ var App = React.createClass({
       }
     }.bind(this);
     this.addItem({
-      Title: 'Connected to ' + state.feedURL,
+      Title: 'Connecting to ' + state.feedURL,
       Published: new Date().toISOString(),
     });
   },
