@@ -15,9 +15,9 @@ import (
 	"github.com/dpup/strimmer/bridge"
 )
 
+var self = flag.String("self", "", "hostname:port that remote clients should connect to, even if behind a proxy")
 var port = flag.Int("port", 3100, "Port to listen on")
-var addr = flag.String("addr", "", "Hostname or IP of the server")
-var self = flag.String("self", "", "Address that remote clients should connect to")
+var addr = flag.String("addr", "", "IP address the server should listen on")
 
 func main() {
 	flag.Parse()
