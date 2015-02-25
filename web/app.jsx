@@ -158,7 +158,7 @@ var Stream = React.createClass({
 })
 
 
-React.renderComponent(
+React.render(
   <App />,
   document.body
 );
