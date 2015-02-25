@@ -12,10 +12,9 @@ RUN ln -s /usr/bin/nodejs /usr/bin/node # Fix stupid naming difference
 # START golang:onbuild
 RUN mkdir -p /go/src/app
 WORKDIR /go/src/app
-CMD ["go-wrapper", "run"]
-ONBUILD COPY . /go/src/app
-ONBUILD RUN go-wrapper download
-ONBUILD RUN go-wrapper install
+COPY . /go/src/app
+RUN go-wrapper download
+RUN go-wrapper install
 # END golang:onbuild
 
 # Do the JSX compilation and make compiled output available in the same dir.
