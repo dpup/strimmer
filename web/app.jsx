@@ -19,7 +19,7 @@ var App = React.createClass({
     );
   },
   onSubscribe: function (state) {
-    var conn = new WebSocket('ws://' + state.bridgeURL + '/bridge?feed=' + encodeURIComponent(state.feedURL));
+    var conn = new WebSocket('ws://' + location.host + '/bridge?feed=' + encodeURIComponent(state.feedURL));
     conn.onopen = function (e) {
       console.log('Connection open')
     }
@@ -58,14 +58,12 @@ var Form = React.createClass({
   mixins: [React.addons.LinkedStateMixin],
   getInitialState: function () {
     return {
-      bridgeURL: location.host,
       feedURL: 'http://push-pub.appspot.com/feed'
     };
   },
   render: function () {
     return (
       <div className="form">
-        <input valueLink={this.linkState('bridgeURL')} placeholder="my.bridge.com:1234" /> Bridge location<br />
         <input valueLink={this.linkState('feedURL')} /> Feed URL<br />
         <button onClick={this.onSubscribeClicked}>Subscribe</button>
       </div>

@@ -12,7 +12,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/dpup/strimmer/bridge"
+	"github.com/dpup/push2ws"
 )
 
 var self = flag.String("self", "", "hostname:port that remote clients should connect to, even if behind a proxy")
@@ -29,14 +29,14 @@ func main() {
 		w.Header().Set("Content-Type", "text/plain")
 		lr.Dump(w)
 	})
-	http.Handle("/", http.FileServer(http.Dir("./")))
+	http.Handle("/", http.FileServer(http.Dir("./web/")))
 
 	s := *self
 	if s == "" {
 		s = fmt.Sprintf("%s:%d", *addr, *port)
 	}
 
-	b := bridge.NewBridge(20, true) // Add flags.
+	b := push2ws.NewBridge(true) // Add flags.
 	b.Start(s, *addr, *port)
 }
 
